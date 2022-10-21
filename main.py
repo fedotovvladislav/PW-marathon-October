@@ -110,14 +110,11 @@ def column_date():
     sheet = wb.active
     today = datetime.date.today()
     max_cell = sheet.cell(row=1, column=sheet.max_column).value
-    print(max_cell)
     if max_cell is None:
         date_create(sheet, today)
     else:
-        print(type(max_cell))
         if isinstance(max_cell, datetime.datetime):
             max_cell = max_cell.date()
-        print(max_cell == today)
         if max_cell != today:
             date_create(sheet, today)
     wb.save('marathon.xlsx')
