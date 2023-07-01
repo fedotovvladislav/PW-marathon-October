@@ -9,6 +9,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import PatternFill, Border, Side
@@ -23,9 +24,9 @@ def login_gmail(driver, login_page, account, wait):
     input_email = wait.until(EC.presence_of_element_located(
         (By.NAME, 'identifier')))
     input_email.send_keys(account['email'], Keys.ENTER)
-    sleep(1)
+    driver.implicitly_wait(10)
     input_pwd = wait.until(EC.presence_of_element_located(
-        (By.NAME, 'password')))
+        (By.NAME, 'Passwd')))
     input_pwd.send_keys(account['pwd'], Keys.ENTER)
     driver.switch_to.window(login_page)
     resume_btn = wait.until(EC.presence_of_element_located(
@@ -92,13 +93,17 @@ def create_new_account(account):
             break
     else:
         account_cell = sheet.cell(row=sheet.max_row + 1, column=1)
-        sheet.merge_cells(start_row=sheet.max_row, start_column=1, end_row=sheet.max_row + 3, end_column=1)
+        sheet.merge_cells(start_row=sheet.max_row, start_column=1, end_row=sheet.max_row + 7, end_column=1)
         account_cell.value = account['name']
         account_row = account_cell.row
-        sheet.cell(row=account_row, column=2).value = 'ЛА/ДР'
-        sheet.cell(row=account_row + 1, column=2).value = 'МИ'
-        sheet.cell(row=account_row + 2, column=2).value = 'Морай'
-        sheet.cell(row=account_row + 3, column=2).value = 'Призывной'
+        sheet.cell(row=account_row, column=2).value = 'Ежа(июль)'
+        sheet.cell(row=account_row + 1, column=2).value = 'Караван(июль)'
+        sheet.cell(row=account_row + 2, column=2).value = 'Свод трав(июль)'
+        sheet.cell(row=account_row + 3, column=2).value = 'Призывной(июль)'
+        sheet.cell(row=account_row + 4, column=2).value = 'Терраса(август)'
+        sheet.cell(row=account_row + 5, column=2).value = 'Море(август)'
+        sheet.cell(row=account_row + 6, column=2).value = 'Ежа ДЗ(август)'
+        sheet.cell(row=account_row + 7, column=2).value = 'Гео/Яшма(август)'
 
     wb.save('marathon.xlsx')
     wb.close()
@@ -134,7 +139,7 @@ def date_create(sheet, day):
 def info_write(row, column, elements):
     wb = load_workbook('marathon.xlsx')
     sheet = wb.active
-    for count in range(4):
+    for count in range(8):
         sheet.cell(row=row + count, column=column).value = elements[5 + count].text
     wb.save('marathon.xlsx')
     wb.close()
@@ -194,53 +199,67 @@ if __name__ == '__main__':
         }
         print(f'start work account {account["name"]}')
         account_row = create_new_account(account)
-        options = uc.ChromeOptions()
-        prefs = {"credentials_enable_service": False,
-                 "profile.password_manager_enabled": False}
-        options.add_argument('--disable-gpu')
-        options.add_argument('--disable-extensions')
-        options.add_argument('--disable-infobars')
-        options.add_argument('--no-sandbox')
-        options.add_argument('--start-maximized')
-        options.add_experimental_option("prefs", prefs)
-        if account['type_auth'] != 'gmail' and account['type_auth'] != 'vk':
-            options.headless = True
-        driver = uc.Chrome(use_subprocess=True, options=options)
-        wait = WebDriverWait(driver, 10)
-        if account['type_auth'] == 'vk':
-            driver.get('https://vk.com/')
-            driver.implicitly_wait(10)
-            input_phone = wait.until(EC.presence_of_element_located(
-                (By.CLASS_NAME, 'VkIdForm__input')))
-            input_phone.send_keys(account['email'], Keys.ENTER)
-            sleep(1)
-            input_pwd = wait.until(EC.presence_of_element_located(
-                (By.NAME, 'password')))
-            input_pwd.send_keys(account['pwd'], Keys.ENTER)
-            sleep(1)
-            driver.get('https://pw.mail.ru/supermarathon.php')
-        else:
-            driver.get('https://pw.mail.ru/supermarathon.php')
+        complete = False
+        while not complete:
+            try:
+                options = uc.ChromeOptions()
+                prefs = {"credentials_enable_service": False,
+                         "profile.password_manager_enabled": False}
+                options.add_argument('--disable-gpu')
+                options.add_argument('--disable-extensions')
+                options.add_argument('--disable-infobars')
+                options.add_argument('--no-sandbox')
+                options.add_argument('--start-maximized')
+                options.add_experimental_option("prefs", prefs)
+                options.add_argument('--headless')
+                driver = uc.Chrome(use_subprocess=True, options=options)
+                wait = WebDriverWait(driver, 10)
+                if account['type_auth'] == 'vk':
+                    driver.get('https://vk.com/')
 
-        start_page = driver.current_window_handle
-        login_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located(
-            (By.CLASS_NAME, "login-button")))
-        login_btn.click()
-        login_page = driver.window_handles[1]
-        driver.switch_to.window(login_page)
-        if account['type_auth'] == 'mail':
-            login_mail(driver, login_page, account, wait)
-        elif account['type_auth'] == 'straight':
-            login_straight(account, wait)
-        elif account['type_auth'] == 'gmail':
-            login_gmail(driver, login_page, account, wait)
-        elif account['type_auth'] == 'vk':
-            login_vk(driver, login_page, wait)
+                    driver.implicitly_wait(10)
+                    input_phone = wait.until(EC.presence_of_element_located(
+                        (By.CLASS_NAME, 'VkIdForm__input')))
+                    input_phone.send_keys(account['email'], Keys.ENTER)
+                    driver.implicitly_wait(10)
+                    auth_to_pwd = wait.until(EC.presence_of_element_located(
+                        (By.CLASS_NAME, 'vkc__Link__link')))
+                    auth_to_pwd.click()
 
-        driver.switch_to.window(start_page)
-        elements = driver.find_elements(by=By.TAG_NAME, value='span')
-        info_write(account_row, date_column, elements)
-        driver.quit()
+                    driver.implicitly_wait(10)
+                    input_pwd = wait.until(EC.presence_of_element_located(
+                        (By.NAME, 'password')))
+                    input_pwd.send_keys(account['pwd'], Keys.ENTER)
+                    sleep(5)
+                    driver.implicitly_wait(10)
+                    driver.get('https://pw.mail.ru/supermarathon2.php')
+                else:
+                    driver.get('https://pw.mail.ru/supermarathon2.php')
+
+                start_page = driver.current_window_handle
+                login_btn = WebDriverWait(driver, 10).until(EC.presence_of_element_located(
+                    (By.CLASS_NAME, "login-button")))
+                login_btn.click()
+                login_page = driver.window_handles[1]
+                driver.switch_to.window(login_page)
+                if account['type_auth'] == 'mail':
+                    login_mail(driver, login_page, account, wait)
+                elif account['type_auth'] == 'straight':
+                    login_straight(account, wait)
+                elif account['type_auth'] == 'gmail':
+                    login_gmail(driver, login_page, account, wait)
+                elif account['type_auth'] == 'vk':
+                    login_vk(driver, login_page, wait)
+
+                driver.switch_to.window(start_page)
+                elements = driver.find_elements(by=By.TAG_NAME, value='span')
+                info_write(account_row, date_column, elements)
+                driver.quit()
+                complete = True
+            except TimeoutException:
+                print('Timeout except. One more attempt.')
+                driver.quit()
+
     progress(date_column)
     set_border()
     print('Complete!')
